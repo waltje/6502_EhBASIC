@@ -1,5 +1,5 @@
 
-; Enhanced BASIC to assemble under 6502 simulator, $ver 2.31
+; Enhanced BASIC to assemble under 6502 simulator, $ver 2.22p5
 
 ; $E7E1 $E7CF $E7C6 $E7D3 $E7D1 $E7D5 $E7CF $E81E $E825
 
@@ -40,14 +40,6 @@
 ;      5.5     garbage collection may cause an overlap with temporary strings
 ;      5.6     floating point multiply rounding bug
 ;      5.7     VAL() may cause string variables to be trashed
-;
-; 2.30      restarted versioning
-; 2.31      add patch: lower case token recognition V2 ***
-;                      WARNING! changes documented behavior!
-;           add patch: implement "QUIT" to return to monitor
-;                      ONLY if IN_MONITOR is defined!
-USE_LCASE         = 1
-USE_QUIT          = 0
 
 ; zero page use ..
 
@@ -369,11 +361,10 @@ TK_BITSET         = TK_SWAP+1       ; BITSET token
 TK_BITCLR         = TK_BITSET+1     ; BITCLR token
 TK_IRQ            = TK_BITCLR+1     ; IRQ token
 TK_NMI            = TK_IRQ+1        ; NMI token
-TK_QUIT           = TK_NMI+1        ; QUIT token
 
 ; secondary command tokens, can't start a statement
 
-TK_TAB            = TK_QUIT+1       ; TAB token
+TK_TAB            = TK_NMI+1        ; TAB token
 TK_ELSE           = TK_TAB+1        ; ELSE token
 TK_TO             = TK_ELSE+1       ; TO token
 TK_FN             = TK_TO+1         ; FN token
@@ -484,7 +475,7 @@ Stack_floor       = 16        ; bytes left free on stack for background interrup
 
 ; This start can be changed to suit your system
 
-      .org  $C000
+      *=    $C000
 
 ; BASIC cold start entry point
 
@@ -1079,16 +1070,6 @@ LAB_13AC
       LDA   Ibuffs,X          ; get byte from input buffer
       BEQ   LAB_13EC          ; if null save byte then exit
 
-.IF USE_LCASE
-      CMP   #'{'              ; convert lower to upper case
-      BCS   LAB_13EC          ; is above lower case
-      CMP   #'a'
-      BCC   PATCH_LC          ; is below lower case
-      AND   #$DF              ; mask lower case bit
-
-PATCH_LC
-.ENDIF
-
       CMP   #'_'              ; compare with "_"
       BCS   LAB_13EC          ; if >= go save byte then continue crunching
 
@@ -1123,11 +1104,7 @@ LAB_13D0
       CMP   (ut2_pl),Y        ; compare with keyword first character table byte
       BEQ   LAB_13D1          ; go do word_table_chr if match
 
-.IF USE_LCASE
-      BCC   PATCH_LC2         ; if < keyword first character table byte go restore
-.ELSE
       BCC   LAB_13EA          ; if < keyword first character table byte go restore
-.ENDIF
                               ; Y and save to crunched
 
       INY                     ; else increment pointer
@@ -1155,12 +1132,7 @@ LAB_13D8
       BMI   LAB_13EA          ; all bytes matched so go save token
 
       INX                     ; next buffer byte
-.IF USE_LCASE
-      EOR     Ibuffs,x        ; check bits against table
-      AND     #$DF            ; DF masks the upper/lower case bit
-.ELSE
       CMP   Ibuffs,X          ; compare with byte from input buffer
-.ENDIF
       BEQ   LAB_13D6          ; go compare next if match
 
       BNE   LAB_1417          ; branch if >< (not found keyword)
@@ -1224,9 +1196,6 @@ LAB_141B
       BNE   LAB_13D8          ; go test next word if not zero byte (end of table)
 
                               ; reached end of table with no match
-.IF USE_LCASE
-PATCH_LC2
-.ENDIF
       LDA   Ibuffs,X          ; restore byte from input buffer
       BPL   LAB_13EA          ; branch always (all bytes in buffer are $00-$7F)
                               ; go save byte in output and continue crunching
@@ -1579,7 +1548,7 @@ LAB_15B3
                              
 ; *** begin patch  2.22p5.3   potential return address -$100 (page not incremented) ***
 ; *** add
-   .IF (* & $FF) == $FD
+   .IF [* & $FF] == $FD
       NOP                     ; return address of JSR +1 (on  next page)
    .ENDIF  
 ; *** end   patch  2.22p5.3   potential return address -$100 (page not incremented) ***
@@ -1658,7 +1627,7 @@ LAB_1602
       JMP   LAB_LET           ; else go do implied LET
 
 LAB_1609
-      CMP   #(TK_TAB-$80)*2   ; compare normalised token * 2 with TAB
+      CMP   #[TK_TAB-$80]*2   ; compare normalised token * 2 with TAB
       BCS   LAB_15D9          ; branch if A>=TAB (do syntax error then warm start)
                               ; only tokens before TAB can start a line
       TAY                     ; copy to index
@@ -3133,7 +3102,7 @@ LAB_1B43
                               ; now push sign, round FAC1 and put on stack
 ; *** begin patch  2.22p5.3   potential return address -$100 (page not incremented) ***
 ; *** add
-   .IF (* & $FF) == $FD
+   .IF [* & $FF] == $FD
       NOP                     ; return address of JSR +1 (on  next page)
    .ENDIF  
 ; *** end   patch  2.22p5.3   potential return address -$100 (page not incremented) ***
@@ -3370,9 +3339,9 @@ LAB_1C13
 ; *** with
       TAX                     ; save to trap concatenate
       PLA                     ; dump return address high byte
-      CPX   #<(LAB_224Da+2)   ; from concatenate low return address?
+      CPX   #<[LAB_224Da+2]   ; from concatenate low return address?
       BNE   LAB_1C13b         ; No - continue!
-      CMP   #>(LAB_224Da+2)   ; from concatenate high return address?
+      CMP   #>[LAB_224Da+2]   ; from concatenate high return address?
       BEQ   LAB_1C13a         ; Yes - error!
 LAB_1C13b
       JMP   LAB_1B1D          ; execute function then continue evaluation
@@ -8025,14 +7994,10 @@ EndTab
 
 LAB_MSZM
       .byte $0D,$0A,"Memory size ",$00
+
 LAB_SMSG
       .byte " Bytes free",$0D,$0A,$0A
-
-LAB_HELLO
-      .byte "6502 Enhanced BASIC "
-LAB_VERSION
-      .byte "2.31"
-      .byte $0A,$00
+      .byte "Enhanced BASIC 2.22p5",$0A,$00
 
 ; numeric constants and series
 
@@ -8553,10 +8518,6 @@ LBB_POS
 LBB_PRINT
       .byte "RINT",TK_PRINT   ; PRINT
       .byte $00
-.IF USE_QUIT
-LBB_QUIT
-      .byte "UIT",TK_QUIT     ; QUIT
-.ENDIF
 TAB_ASCR
 LBB_READ
       .byte "EAD",TK_READ     ; READ
