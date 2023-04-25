@@ -1,0 +1,44 @@
+Modules list:
+-------------
+ehbasic.o:
+    global            Offs=000000  Size=000100  Align=00100  Fill=0000
+    loader            Offs=000000  Size=000300  Align=00100  Fill=0000
+    interp            Offs=000000  Size=00398C  Align=00001  Fill=0000
+
+
+Segment list:
+-------------
+Name                   Start     End    Size  Align
+----------------------------------------------------
+loader                002000  0022FF  000300  00100
+interp                008400  00BD8B  00398C  00001
+global                00BE00  00BEFF  000100  00100
+
+
+Exports list by name:
+---------------------
+__global_LOAD__           002300 RLA    __global_RUN__            00BE00 RLA    
+__interp_LOAD__           002400 RLA    __interp_RUN__            008400 RLA    
+__interp_SIZE__           00398C REA    
+
+
+Exports list by value:
+----------------------
+__global_LOAD__           002300 RLA    __interp_LOAD__           002400 RLA    
+__interp_SIZE__           00398C REA    __interp_RUN__            008400 RLA    
+__global_RUN__            00BE00 RLA    
+
+
+Imports list:
+-------------
+__global_LOAD__ ([linker generated]):
+    ehbasic.o                 ehbasic.asm:5
+__global_RUN__ ([linker generated]):
+    ehbasic.o                 ehbasic.asm:5
+__interp_LOAD__ ([linker generated]):
+    ehbasic.o                 ehbasic.asm:4
+__interp_RUN__ ([linker generated]):
+    ehbasic.o                 ehbasic.asm:4
+__interp_SIZE__ ([linker generated]):
+    ehbasic.o                 ehbasic.asm:4
+

@@ -1,0 +1,128 @@
+*** .attic\basic-v230.asm	Tue Apr 25 03:21:40 2023
+--- basic.asm.orig	Tue Apr 25 05:33:03 2023
+***************
+*** 1,5 ****
+  
+! ; Enhanced BASIC to assemble under 6502 simulator, $ver 2.30 (2.22p5-7)
+  
+  ; $E7E1 $E7CF $E7C6 $E7D3 $E7D1 $E7D5 $E7CF $E81E $E825
+  
+--- 1,5 ----
+  
+! ; Enhanced BASIC to assemble under 6502 simulator, $ver 2.31
+  
+  ; $E7E1 $E7CF $E7C6 $E7D3 $E7D1 $E7D5 $E7CF $E81E $E825
+  
+***************
+*** 42,47 ****
+--- 42,53 ----
+  ;      5.7     VAL() may cause string variables to be trashed
+  ;
+  ; 2.30      restarted versioning
++ ; 2.31      add patch: lower case token recognition V2 ***
++ ;                      WARNING! changes documented behavior!
++ ;           add patch: implement "QUIT" to return to monitor
++ ;                      ONLY if IN_MONITOR is defined!
++ USE_LCASE         = 1
++ USE_QUIT          = 1
+  
+  ; zero page use ..
+  
+***************
+*** 1073,1078 ****
+--- 1079,1094 ----
+        LDA   Ibuffs,X          ; get byte from input buffer
+        BEQ   LAB_13EC          ; if null save byte then exit
+  
++ .IF USE_LCASE
++       CMP   #'{'              ; convert lower to upper case
++       BCS   LAB_13EC          ; is above lower case
++       CMP   #'a'
++       BCC   PATCH_LC          ; is below lower case
++       AND   #$DF              ; mask lower case bit
++ 
++ PATCH_LC
++ .ENDIF
++ 
+        CMP   #'_'              ; compare with "_"
+        BCS   LAB_13EC          ; if >= go save byte then continue crunching
+  
+***************
+*** 1107,1113 ****
+--- 1123,1133 ----
+        CMP   (ut2_pl),Y        ; compare with keyword first character table byte
+        BEQ   LAB_13D1          ; go do word_table_chr if match
+  
++ .IF USE_LCASE
++       BCC   PATCH_LC2         ; if < keyword first character table byte go restore
++ .ELSE
+        BCC   LAB_13EA          ; if < keyword first character table byte go restore
++ .ENDIF
+                                ; Y and save to crunched
+  
+        INY                     ; else increment pointer
+***************
+*** 1135,1141 ****
+--- 1155,1166 ----
+        BMI   LAB_13EA          ; all bytes matched so go save token
+  
+        INX                     ; next buffer byte
++ .IF USE_LCASE
++       EOR     Ibuffs,x        ; check bits against table
++       AND     #$DF            ; DF masks the upper/lower case bit
++ .ELSE
+        CMP   Ibuffs,X          ; compare with byte from input buffer
++ .ENDIF
+        BEQ   LAB_13D6          ; go compare next if match
+  
+        BNE   LAB_1417          ; branch if >< (not found keyword)
+***************
+*** 1199,1204 ****
+--- 1224,1232 ----
+        BNE   LAB_13D8          ; go test next word if not zero byte (end of table)
+  
+                                ; reached end of table with no match
++ .IF USE_LCASE
++ PATCH_LC2
++ .ENDIF
+        LDA   Ibuffs,X          ; restore byte from input buffer
+        BPL   LAB_13EA          ; branch always (all bytes in buffer are $00-$7F)
+                                ; go save byte in output and continue crunching
+***************
+*** 8001,8009 ****
+        .byte " Bytes free",$0D,$0A,$0A
+  
+  LAB_HELLO
+!       .byte "Enhanced BASIC "
+  LAB_VERSION
+!       .byte "2.30"
+        .byte $0A,$00
+  
+  ; numeric constants and series
+--- 8029,8037 ----
+        .byte " Bytes free",$0D,$0A,$0A
+  
+  LAB_HELLO
+!       .byte "6502 Enhanced BASIC "
+  LAB_VERSION
+!       .byte "2.31"
+        .byte $0A,$00
+  
+  ; numeric constants and series
+***************
+*** 8525,8531 ****
+  LBB_PRINT
+        .byte "RINT",TK_PRINT   ; PRINT
+        .byte $00
+! .IF STANDALONE
+  LBB_QUIT
+        .byte "UIT",TK_QUIT     ; QUIT
+  .ENDIF
+--- 8553,8559 ----
+  LBB_PRINT
+        .byte "RINT",TK_PRINT   ; PRINT
+        .byte $00
+! .IF USE_QUIT
+  LBB_QUIT
+        .byte "UIT",TK_QUIT     ; QUIT
+  .ENDIF

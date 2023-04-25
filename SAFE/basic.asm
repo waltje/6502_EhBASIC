@@ -1,5 +1,5 @@
 
-; Enhanced BASIC to assemble under 6502 simulator, $ver 2.32
+; Enhanced BASIC to assemble under 6502 simulator, $ver 2.31
 
 ; $E7E1 $E7CF $E7C6 $E7D3 $E7D1 $E7D5 $E7CF $E81E $E825
 
@@ -46,7 +46,6 @@
 ;                      WARNING! changes documented behavior!
 ;           add patch: implement "QUIT" to return to monitor
 ;                      ONLY if IN_MONITOR is defined!
-; 2.32      add patch: expand usable RAM size by moving stuff
 USE_LCASE         = 1         ; include LowerCase support
 USE_QUIT          = 0         ; include support for QUIT command
 MAX_SIZED         = 1         ; optimize for maximum usable RAM
@@ -8042,7 +8041,7 @@ LAB_SMSG
 LAB_HELLO
       .byte "6502 Enhanced BASIC "
 LAB_VERSION
-      .byte "2.32"
+      .byte "2.31"
       .byte $0A,$00
 
 ; numeric constants and series
